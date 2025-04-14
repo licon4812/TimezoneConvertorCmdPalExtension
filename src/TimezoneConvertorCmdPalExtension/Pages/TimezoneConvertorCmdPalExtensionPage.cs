@@ -202,6 +202,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
                     Subtitle = $"{tz.Value} - {currentTime:D}"
+                    Subtitle = $"{tz.Value} - {currentTime:D}",
+                    Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
                 };
             })
             .ToList();

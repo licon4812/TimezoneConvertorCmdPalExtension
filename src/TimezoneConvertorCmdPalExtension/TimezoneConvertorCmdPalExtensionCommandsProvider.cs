@@ -13,7 +13,7 @@ public partial class TimezoneConvertorCmdPalExtensionCommandsProvider : CommandP
 
     public TimezoneConvertorCmdPalExtensionCommandsProvider()
     {
-        DisplayName = "Time zone Convertor";
+        DisplayName = "Time Zone Convertor";
         Icon = new IconInfo("\uEC92");
         _commands = [
             new CommandItem(new Pages.TimezoneConvertorCmdPalExtensionPage()) { Title = DisplayName },
