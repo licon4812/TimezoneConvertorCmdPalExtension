@@ -77,11 +77,16 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
 
         // If the search text is empty, return all time zones
         var allTimeZones = GetAllTimeZonesWithLocalOnTop(DateTime.UtcNow);
+        var localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
 
         // Check if the search text is a valid date or time
         if (DateTime.TryParse(searchText, out var time))
         {
             allTimeZones = GetAllTimeZonesWithLocalOnTop(time);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return allTimeZones.ToList();
         }
         else if (searchText.Contains(','))
         {
@@ -89,6 +94,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
             {
                 allTimeZones = GetAllTimeZonesWithLocalOnTop(parsedDate);
+                localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
             }
 
             // Additional filtering based on parts[1]
@@ -105,6 +111,12 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             allTimeZones = allTimeZones.Where(item => item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                                                       item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase))
                                        .ToList();
+        }
+
+        // Ensure the local timezone is not removed
+        if (localTimeZoneItem != null && !allTimeZones.Contains(localTimeZoneItem))
+        {
+            allTimeZones.Insert(0, localTimeZoneItem);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
