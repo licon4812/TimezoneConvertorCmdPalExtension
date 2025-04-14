@@ -88,9 +88,10 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
 
             return allTimeZones.ToList();
         }
-        else if (searchText.Contains(','))
+
+        if (searchText.Contains("to"))
         {
-            var parts = searchText.Split(",");
+            var parts = searchText.Split("to");
             if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
             {
                 allTimeZones = GetAllTimeZonesWithLocalOnTop(parsedDate);
@@ -102,7 +103,27 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             {
                 allTimeZones = allTimeZones.Where(item => item.Title.Contains(parts[1], StringComparison.OrdinalIgnoreCase) ||
                                                           item.Subtitle.Contains(parts[1], StringComparison.OrdinalIgnoreCase))
-                                           .ToList();
+                    .ToList();
+            }
+        }
+        else if (searchText.Contains(','))
+        {
+            var parts = searchText.Split(",");
+            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                var timeZoneNames = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
+                var timeZoneInfo = timeZoneNames.FirstOrDefault(tz => tz.Value.Contains(parts[1].Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (timeZoneInfo.Key != null)
+                {
+                    // Convert the parsed time from the specified timezone to the local timezone
+                    var sourceTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneInfo.Key);
+                    var sourceTime = TimeZoneInfo.ConvertTime(parsedDate, sourceTimeZone, TimeZoneInfo.Local);
+
+                    // Update the list of time zones with the converted local time
+                    allTimeZones = GetAllTimeZonesWithLocalOnTop(sourceTime);
+                    localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
+                }
             }
         }
         else
@@ -110,7 +131,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             // Final else block for general filtering
             allTimeZones = allTimeZones.Where(item => item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                                                       item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                                       .ToList();
+                .ToList();
         }
 
         // Ensure the local timezone is not removed
