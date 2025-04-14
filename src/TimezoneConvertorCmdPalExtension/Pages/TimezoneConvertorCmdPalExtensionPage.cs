@@ -18,7 +18,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private bool _isError;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly BufferBlock<string> _searchTextBuffer = new();
-    private IReadOnlyList<ListItem> _results = Array.Empty<ListItem>();
+    private IReadOnlyList<ListItem> _results = GetAllTimeZonesWithLocalOnTop();
 
     public TimezoneConvertorCmdPalExtensionPage()
     {
@@ -65,28 +65,63 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         _searchTextBuffer.Post(newSearch);
     }
 
-    private async Task<IReadOnlyList<ListItem>> ProcessSearchAsync(string searchText, CancellationToken cancellationToken)
+
+    public override IListItem[] GetItems()
+    {
+        return _results.ToArray<IListItem>();
+    }
+
+    private static async Task<IReadOnlyList<ListItem>> ProcessSearchAsync(string searchText, CancellationToken cancellationToken)
     {
         await Task.Yield(); // Simulate asynchronous behavior
-        var timeZones = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
+
+        var allTimeZones = GetAllTimeZonesWithLocalOnTop();
 
         // Filter time zones based on the search text
         var filteredTimeZones = string.IsNullOrWhiteSpace(searchText)
-            ? timeZones
-            : timeZones.Where(tz => tz.Key.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                    tz.Value.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            ? allTimeZones
+            : allTimeZones.Where(item => item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                                         item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        return filteredTimeZones.ToList();
+    }
+
+    public override ICommandItem? EmptyContent
+    {
+        get
+        {
+            if (_isError)
+            {
+                return new CommandItem
+                {
+                    Title = "Error loading time zones",
+                    Icon = new IconInfo("\uea39"),
+                    Subtitle = "An error occurred while fetching time zones.",
+                    Command = new NoOpCommand()
+                };
+            }
+
+            // Use the refactored method to fetch all time zones
+            GetAllTimeZonesWithLocalOnTop();
+
+            return new CommandItem
+            {
+                Title = "All time zones displayed",
+                Icon = new IconInfo("\ue8af"),
+                Subtitle = "Showing all time zones with the local time zone on top.",
+                Command = new NoOpCommand()
+            };
+        }
+    }
+
+    private static List<ListItem> GetAllTimeZonesWithLocalOnTop()
+    {
+        var timeZones = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
         var localTimeZone = TimeZoneInfo.Local;
 
-        // Ensure the local time zone is always included
-        if (!filteredTimeZones.Any(tz => tz.Key.Equals(localTimeZone.Id, StringComparison.OrdinalIgnoreCase)))
-        {
-            filteredTimeZones = filteredTimeZones.Append(new KeyValuePair<string, string>(localTimeZone.Id, localTimeZone.DisplayName));
-        }
-
-        var items = filteredTimeZones
+        var items = timeZones
             .Select(tz =>
             {
                 var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tz.Key);
@@ -98,38 +133,21 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
                         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
 
-                var displayName = TimeZoneNames.TZNames.GetDisplayNameForTimeZone(tz.Key,
-                    System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
-
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = displayName!
+                    Subtitle = tz.Value
                 };
             })
             .ToList();
 
         // Move the local time zone to the top
-        var localTimeZoneItem = items.FirstOrDefault(item => item.Title.StartsWith(localTimeZone.DisplayName, StringComparison.Ordinal));
-        if (localTimeZoneItem != null)
-        {
-            items.Remove(localTimeZoneItem);
-            items.Insert(0, localTimeZoneItem);
-        }
+        var localTimeZoneItem = items.FirstOrDefault(item => item.Subtitle == localTimeZone.DisplayName);
+        if (localTimeZoneItem == null) return items;
+        items.Remove(localTimeZoneItem);
+        items.Insert(0, localTimeZoneItem);
 
         return items;
     }
 
-    public override IListItem[] GetItems()
-    {
-        return _results.ToArray<IListItem>();
-    }
-
-    public override ICommandItem? EmptyContent => new CommandItem
-    {
-        Title = _isError ? "Error loading time zones" : "No time zones found",
-        Icon = _isError ? new IconInfo("\uea39") : new IconInfo("\ue8af"),
-        Subtitle = _isError ? "An error occurred while fetching time zones." : "Try searching for a different time zone.",
-        Command = new NoOpCommand()
-    };
 }
