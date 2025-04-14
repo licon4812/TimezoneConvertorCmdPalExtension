@@ -14,7 +14,7 @@ public partial class TimezoneConvertorCmdPalExtensionCommandsProvider : CommandP
     public TimezoneConvertorCmdPalExtensionCommandsProvider()
     {
         DisplayName = "Time Zone Convertor";
-        Icon = new IconInfo("\uEC92");
+        Icon = new IconInfo("\uE775");
         _commands = [
             new CommandItem(new Pages.TimezoneConvertorCmdPalExtensionPage()) { Title = DisplayName },
         ];

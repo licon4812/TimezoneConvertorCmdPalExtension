@@ -28,7 +28,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         var version = Package.Current.Id.Version;
         var appVersion = $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
 
-        Icon = new IconInfo("\uEC92");
+        Icon = new IconInfo("\uE775");
         Title = $"Timezone Convertor - v{appVersion}";
         Name = "Convert";
 
@@ -201,7 +201,6 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = $"{tz.Value} - {currentTime:D}"
                     Subtitle = $"{tz.Value} - {currentTime:D}",
                     Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
                 };
