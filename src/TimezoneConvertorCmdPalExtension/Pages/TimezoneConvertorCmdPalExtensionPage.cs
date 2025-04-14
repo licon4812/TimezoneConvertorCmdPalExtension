@@ -129,7 +129,23 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
 
                     // Update the list of time zones with the converted local time
                     allTimeZones = GetAllTimeZonesWithLocalOnTop(sourceTime);
+
+                    // Find the item for the specified time zone
+                    var specifiedTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle.Contains(parts[1].Trim(), StringComparison.OrdinalIgnoreCase));
                     localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
+
+                    // Reorder the list: specified time zone -> local time zone -> others
+                    if (specifiedTimeZoneItem != null)
+                    {
+                        allTimeZones.Remove(specifiedTimeZoneItem);
+                        allTimeZones.Insert(0, specifiedTimeZoneItem);
+                    }
+
+                    if (localTimeZoneItem != null && !allTimeZones.Contains(localTimeZoneItem))
+                    {
+                        allTimeZones.Remove(localTimeZoneItem);
+                        allTimeZones.Insert(1, localTimeZoneItem); // Place local time zone after the specified time zone
+                    }
                 }
             }
         }
