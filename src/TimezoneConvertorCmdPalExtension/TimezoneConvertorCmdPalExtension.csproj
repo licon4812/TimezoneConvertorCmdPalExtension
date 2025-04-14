@@ -65,5 +65,6 @@
 
     <PublishTrimmed>true</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
+    <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
   </PropertyGroup>
 </Project>

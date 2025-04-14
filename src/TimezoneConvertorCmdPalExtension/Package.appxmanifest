@@ -6,18 +6,19 @@
   xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   IgnorableNamespaces="uap uap3 rescap">
 
   <Identity
-    Name="TimezoneConvertorCmdPalExtension"
-    Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+    Name="23610AlickolliSoftware.TimeZoneConvertorforCommand"
+    Publisher="CN=5CECD841-CF4E-45AF-B443-573F4A3614A0"
     Version="0.0.1.0" />
   <!-- When you're ready to publish your extension, you'll need to change the
        Publisher= to match your own identity -->
 
   <Properties>
-    <DisplayName>Time zone Convertor for Command Palette</DisplayName>
-    <PublisherDisplayName>A Lone Developer</PublisherDisplayName>
+    <DisplayName>Time Zone Convertor for Command Palette</DisplayName>
+    <PublisherDisplayName>Alickolli Software</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 

@@ -108,7 +108,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
             {
                 allTimeZones = allTimeZones.Where(item => item.Title.Contains(parts[1], StringComparison.OrdinalIgnoreCase) ||
-                                                          item.Subtitle.Contains(parts[1], StringComparison.OrdinalIgnoreCase))
+                                                          item.Subtitle.Contains(parts[1], StringComparison.OrdinalIgnoreCase) ||
+                                                          item.Subtitle.Contains(TimeZoneInfo.Local.DisplayName)) 
                     .ToList();
             }
         }
