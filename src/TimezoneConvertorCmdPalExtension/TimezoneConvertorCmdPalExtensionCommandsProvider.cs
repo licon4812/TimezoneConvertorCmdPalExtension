@@ -13,10 +13,10 @@ public partial class TimezoneConvertorCmdPalExtensionCommandsProvider : CommandP
 
     public TimezoneConvertorCmdPalExtensionCommandsProvider()
     {
-        DisplayName = "Time zone Convertor for Command Palette";
-        Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
+        DisplayName = "Time zone Convertor";
+        Icon = new IconInfo("\uEC92");
         _commands = [
-            new CommandItem(new TimezoneConvertorCmdPalExtensionPage()) { Title = DisplayName },
+            new CommandItem(new Pages.TimezoneConvertorCmdPalExtensionPage()) { Title = DisplayName },
         ];
     }
 
