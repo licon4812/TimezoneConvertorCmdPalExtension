@@ -18,7 +18,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private bool _isError;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly BufferBlock<string> _searchTextBuffer = new();
-    private IReadOnlyList<ListItem> _results = GetAllTimeZonesWithLocalOnTop();
+    private IReadOnlyList<ListItem> _results = GetAllTimeZonesWithLocalOnTop(DateTime.UtcNow);
 
     public TimezoneConvertorCmdPalExtensionPage()
     {
@@ -75,17 +75,41 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     {
         await Task.Yield(); // Simulate asynchronous behavior
 
-        var allTimeZones = GetAllTimeZonesWithLocalOnTop();
+        // If the search text is empty, return all time zones
+        var allTimeZones = GetAllTimeZonesWithLocalOnTop(DateTime.UtcNow);
 
-        // Filter time zones based on the search text
-        var filteredTimeZones = string.IsNullOrWhiteSpace(searchText)
-            ? allTimeZones
-            : allTimeZones.Where(item => item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                         item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        // Check if the search text is a valid date or time
+        if (DateTime.TryParse(searchText, out var time))
+        {
+            allTimeZones = GetAllTimeZonesWithLocalOnTop(time);
+        }
+        else if (searchText.Contains(','))
+        {
+            var parts = searchText.Split(",");
+            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                allTimeZones = GetAllTimeZonesWithLocalOnTop(parsedDate);
+            }
+
+            // Additional filtering based on parts[1]
+            if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
+            {
+                allTimeZones = allTimeZones.Where(item => item.Title.Contains(parts[1], StringComparison.OrdinalIgnoreCase) ||
+                                                          item.Subtitle.Contains(parts[1], StringComparison.OrdinalIgnoreCase))
+                                           .ToList();
+            }
+        }
+        else
+        {
+            // Final else block for general filtering
+            allTimeZones = allTimeZones.Where(item => item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                                                      item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                                       .ToList();
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return filteredTimeZones.ToList();
+        return allTimeZones.ToList();
     }
 
     public override ICommandItem? EmptyContent
@@ -104,7 +128,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             }
 
             // Use the refactored method to fetch all time zones
-            GetAllTimeZonesWithLocalOnTop();
+            GetAllTimeZonesWithLocalOnTop(DateTime.UtcNow);
 
             return new CommandItem
             {
@@ -116,7 +140,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         }
     }
 
-    private static List<ListItem> GetAllTimeZonesWithLocalOnTop()
+    private static List<ListItem> GetAllTimeZonesWithLocalOnTop(DateTime dateTime)
     {
         var timeZones = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
         var localTimeZone = TimeZoneInfo.Local;
@@ -125,7 +149,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             .Select(tz =>
             {
                 var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tz.Key);
-                var currentTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, timeZoneInfo);
+                var currentTime = TimeZoneInfo.ConvertTime(dateTime, timeZoneInfo);
 
                 var timeAbbreviation = timeZoneInfo.IsDaylightSavingTime(currentTime)
                     ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
