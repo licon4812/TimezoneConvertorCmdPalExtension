@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
+using Windows.ApplicationModel;
 
 namespace TimezoneConvertorCmdPalExtension.Pages;
 
@@ -22,9 +23,14 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
 
     public TimezoneConvertorCmdPalExtensionPage()
     {
+
+        // Retrieve the app version
+        var version = Package.Current.Id.Version;
+        var appVersion = $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+
         Icon = new IconInfo("\uEC92");
-        Title = "Time zone Convertor for Command Palette";
-        Name = "Open";
+        Title = $"Timezone Convertor - v{appVersion}";
+        Name = "Convert";
 
         // Configure the search processing pipeline
         Task.Run(async () =>
@@ -130,7 +136,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         {
             // Final else block for general filtering
             allTimeZones = allTimeZones.Where(item => item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                                      item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                                                      item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                                                      item.Subtitle.Contains(TimeZoneInfo.Local.DisplayName))
                 .ToList();
         }
 
@@ -193,17 +200,16 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = tz.Value
+                    Subtitle = $"{tz.Value} - {currentTime:D}"
                 };
             })
             .ToList();
 
-        // Move the local time zone to the top
-        var localTimeZoneItem = items.FirstOrDefault(item => item.Subtitle == localTimeZone.DisplayName);
+        // Ensure the local timezone is always at the top
+        var localTimeZoneItem = items.FirstOrDefault(item => item.Subtitle.Contains(localTimeZone.DisplayName));
         if (localTimeZoneItem == null) return items;
         items.Remove(localTimeZoneItem);
         items.Insert(0, localTimeZoneItem);
-
         return items;
     }
 
