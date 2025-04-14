@@ -15,7 +15,7 @@ namespace TimezoneConvertorCmdPalExtension.Pages;
 
 internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicListPage, IDisposable
 {
-    private bool _isError = false;
+    private bool _isError;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly BufferBlock<string> _searchTextBuffer = new();
     private IReadOnlyList<ListItem> _results = Array.Empty<ListItem>();
@@ -68,27 +68,44 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private async Task<IReadOnlyList<ListItem>> ProcessSearchAsync(string searchText, CancellationToken cancellationToken)
     {
         await Task.Yield(); // Simulate asynchronous behavior
-        var timeZones = TimeZoneInfo.GetSystemTimeZones();
+        var timeZones = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
 
         // Filter time zones based on the search text
         var filteredTimeZones = string.IsNullOrWhiteSpace(searchText)
             ? timeZones
-            : timeZones.Where(tz => tz.DisplayName.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            : timeZones.Where(tz => tz.Key.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                                    tz.Value.Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
         cancellationToken.ThrowIfCancellationRequested();
 
         var localTimeZone = TimeZoneInfo.Local;
 
         // Ensure the local time zone is always included
-        if (!filteredTimeZones.Contains(localTimeZone))
+        if (!filteredTimeZones.Any(tz => tz.Key.Equals(localTimeZone.Id, StringComparison.OrdinalIgnoreCase)))
         {
-            filteredTimeZones = filteredTimeZones.Append(localTimeZone);
+            filteredTimeZones = filteredTimeZones.Append(new KeyValuePair<string, string>(localTimeZone.Id, localTimeZone.DisplayName));
         }
 
         var items = filteredTimeZones
-            .Select(tz => new ListItem(new NoOpCommand())
+            .Select(tz =>
             {
-                Title = $"{tz.DisplayName} - {TimeZoneInfo.ConvertTime(DateTime.UtcNow, tz):hh:mm tt}"
+                var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tz.Key);
+                var currentTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, timeZoneInfo);
+
+                var timeAbbreviation = timeZoneInfo.IsDaylightSavingTime(currentTime)
+                    ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
+                        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
+                    : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
+                        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
+
+                var displayName = TimeZoneNames.TZNames.GetDisplayNameForTimeZone(tz.Key,
+                    System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+
+                return new ListItem(new NoOpCommand())
+                {
+                    Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
+                    Subtitle = displayName!
+                };
             })
             .ToList();
 
