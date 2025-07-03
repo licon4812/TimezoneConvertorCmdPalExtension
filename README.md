@@ -7,6 +7,8 @@ Time Zone Convertor CmdPalExtension is an extension for the PowerToys Command Pa
 - Effortlessly convert time between various time zones using the Command Palette.
 - Simplify scheduling across multiple time zones.
 - Support for a wide range of global time zones.
+- Automatic Daylight Saving Time (DST) handling - displays correct UTC offsets based on the date.
+- Shows timezone abbreviations (e.g., AEST, AEDT) with accurate UTC offset information.
 
 ## Requirements
 
@@ -40,18 +42,40 @@ The extension will list all time zones for the current date and time. With the l
 
 ![](./images/example1.png)
 
+Supported date and time formats:
+- `10:00 AM` (time only - uses current date)
+- `Nov 21 2025 1:53PM` (month name format)
+- `21 Nov 2025 1:53PM` (day month year format)
+- `21/11/2025 1:53PM` (DMY format: MM/DD/YYYY)
+- `11/21/2025 1:53PM` (MYK format: MM/DD/YYYY)
+- `2025-11-21 13:53` (ISO format)
+
 ### Convert from another time zone
 
 To convert a time from another time zone type the following
 
 ```
-<time>, <time zone>
+<date and time>, <time zone>
 ```
+
+Supported date and time formats:
+- `10:00 AM, London` (time only - uses current date)
+- `Nov 21 2025 1:53PM, London` (month name format)
+- `21 Nov 2025 1:53PM, London` (day month year format)
+- `21/11/2025 1:53PM, London` (DMY format: MM/DD/YYYY)
+- `11/21/2025 1:53PM, London` (MYK format: MM/DD/YYYY)
+- `2025-11-21 13:53, London` (ISO format)
 
 For example, to convert 10:00 AM in London to your local time zone, type:
 
 ```
 10:00 AM, London
+```
+
+Or to convert a specific date and time:
+
+```
+Nov 21 2025 1:53PM, London
 ```
 
 ![](./images/example2.png)
@@ -61,8 +85,16 @@ For example, to convert 10:00 AM in London to your local time zone, type:
 To convert a time to another time zone type the following
 
 ```
-<time> to <time zone>
+<date and time> to <time zone>
 ```
+
+Supported date and time formats (same as above):
+- `10:00 AM to London` (time only - uses current date)
+- `Nov 21, 2025 1:53PM to London` (month name format)
+- `21 Nov 2025 1:53PM to London` (day month year format)
+- `21/11/2025 1:53PM to London` (DMY format: DD/MM/YYYY)
+- `11/21/2025 1:53PM to London` (MDY format: MM/DD/YYYY)
+- `2025-11-21 13:53 to London` (ISO format)
 
 For example, to convert 10:00 AM in your local time zone to London, type:
 

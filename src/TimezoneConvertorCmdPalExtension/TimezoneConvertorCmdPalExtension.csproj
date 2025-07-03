@@ -3,6 +3,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>TimezoneConvertorCmdPalExtension</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
     <WindowsSdkPackageVersion>10.0.22621.57</WindowsSdkPackageVersion>
     <TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
