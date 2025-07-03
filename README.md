@@ -42,6 +42,14 @@ The extension will list all time zones for the current date and time. With the l
 
 ![](./images/example1.png)
 
+Supported date and time formats:
+- `10:00 AM, London` (time only - uses current date)
+- `Nov 21 2025 1:53PM, London` (month name format)
+- `21 Nov 2025 1:53PM, London` (day month year format)
+- `21/11/2025 1:53PM, London` (DMY format: MM/DD/YYYY)
+- `11/21/2025 1:53PM, London` (MYK format: MM/DD/YYYY)
+- `2025-11-21 13:53, London` (ISO format)
+
 ### Convert from another time zone
 
 To convert a time from another time zone type the following
@@ -52,9 +60,10 @@ To convert a time from another time zone type the following
 
 Supported date and time formats:
 - `10:00 AM, London` (time only - uses current date)
-- `Nov 21, 2025 1:53PM, London` (month name format)
+- `Nov 21 2025 1:53PM, London` (month name format)
 - `21 Nov 2025 1:53PM, London` (day month year format)
-- `11/21/2025 1:53PM, London` (US format: MM/DD/YYYY)
+- `21/11/2025 1:53PM, London` (DMY format: MM/DD/YYYY)
+- `11/21/2025 1:53PM, London` (MYK format: MM/DD/YYYY)
 - `2025-11-21 13:53, London` (ISO format)
 
 For example, to convert 10:00 AM in London to your local time zone, type:
@@ -80,11 +89,11 @@ To convert a time to another time zone type the following
 ```
 
 Supported date and time formats (same as above):
-- `10:00 AM to London` (time only - uses current date)
-- `Nov 21, 2025 1:53PM to London` (month name format)
-- `21 Nov 2025 1:53PM to London` (day month year format)
-- `11/21/2025 1:53PM to London` (US format: MM/DD/YYYY)
-- `2025-11-21 13:53 to London` (ISO format)
+- `10:00 AM` (time only - uses current date)
+- `Nov 21, 2025 1:53PM` (month name format)
+- `21 Nov 2025 1:53PM` (day month year format)
+- `11/21/2025 1:53PM` (US format: MM/DD/YYYY)
+- `2025-11-21 13:53` (ISO format)
 
 For example, to convert 10:00 AM in your local time zone to London, type:
 
