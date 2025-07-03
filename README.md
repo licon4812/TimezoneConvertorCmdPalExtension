@@ -92,7 +92,8 @@ Supported date and time formats (same as above):
 - `10:00 AM to London` (time only - uses current date)
 - `Nov 21, 2025 1:53PM to London` (month name format)
 - `21 Nov 2025 1:53PM to London` (day month year format)
-- `11/21/2025 1:53PM to London` (US format: MM/DD/YYYY)
+- `11/21/2025 1:53PM to London` (DMY format: DD/MM/YYYY)
+- `21/11/2025 1:53PM to London` (MYD format: MM/DD/YYYY)
 - `2025-11-21 13:53 to London` (ISO format)
 
 For example, to convert 10:00 AM in your local time zone to London, type:
