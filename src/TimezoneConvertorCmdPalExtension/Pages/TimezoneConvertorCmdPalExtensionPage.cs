@@ -222,14 +222,21 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
 
                 // Get the UTC offset for the current time, accounting for DST
                 var utcOffset = timeZoneInfo.GetUtcOffset(currentTime);
-                var offsetString = utcOffset.TotalHours >= 0 ? 
-                    $"UTC+{utcOffset.TotalHours:0}" : 
-                    $"UTC{utcOffset.TotalHours:0}";
+                var offsetString = utcOffset.TotalHours >= 0 ?
+                    $"(UTC+{utcOffset.TotalHours:0}:00)" :
+                    $"(UTC{utcOffset.TotalHours:0}:00)";
+
+                // Fix CA1310 and CA1866 by using IndexOf(char, StringComparison)
+                var startIndex = tz.Value.IndexOf('(', StringComparison.Ordinal);
+                var endIndex = tz.Value.IndexOf(')', StringComparison.Ordinal);
+                var subString = startIndex >= 0 && endIndex > startIndex
+                    ? tz.Value.Substring(startIndex, endIndex - startIndex + 1)
+                    : string.Empty;
 
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = $"({offsetString}) {tz.Value} - {currentTime:D}",
+                    Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} - {currentTime:D}",
                     Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
                 };
             })
