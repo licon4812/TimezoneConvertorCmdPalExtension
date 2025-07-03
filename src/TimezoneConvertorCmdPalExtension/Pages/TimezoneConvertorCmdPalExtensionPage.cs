@@ -98,7 +98,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         if (searchText.Contains("to"))
         {
             var parts = searchText.Split("to");
-            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate) ||
+                DateTime.TryParse(parts[0], out parsedDate))
             {
                 allTimeZones = GetAllTimeZonesWithLocalOnTop(parsedDate);
                 localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
@@ -116,19 +117,24 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         else if (searchText.Contains(','))
         {
             var parts = searchText.Split(",");
-            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate) ||
+                DateTime.TryParse(parts[0], out parsedDate))
             {
                 var timeZoneNames = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
                 var timeZoneInfo = timeZoneNames.FirstOrDefault(tz => tz.Value.Contains(parts[1].Trim(), StringComparison.OrdinalIgnoreCase));
 
                 if (timeZoneInfo.Key != null)
                 {
-                    // Convert the parsed time from the specified timezone to the local timezone
+                    // Parse the date/time as unspecified (not assuming local timezone)
                     var sourceTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneInfo.Key);
-                    var sourceTime = TimeZoneInfo.ConvertTime(parsedDate, sourceTimeZone, TimeZoneInfo.Local);
+                    
+                    // Treat the parsed date as if it's in the source timezone
+                    var dateTimeInSourceZone = DateTime.SpecifyKind(parsedDate, DateTimeKind.Unspecified);
+                    var sourceTime = TimeZoneInfo.ConvertTimeToUtc(dateTimeInSourceZone, sourceTimeZone);
+                    var localTime = TimeZoneInfo.ConvertTimeFromUtc(sourceTime, TimeZoneInfo.Local);
 
                     // Update the list of time zones with the converted local time
-                    allTimeZones = GetAllTimeZonesWithLocalOnTop(sourceTime);
+                    allTimeZones = GetAllTimeZonesWithLocalOnTop(localTime);
 
                     // Find the item for the specified time zone
                     var specifiedTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle.Contains(parts[1].Trim(), StringComparison.OrdinalIgnoreCase));
@@ -214,10 +220,16 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
                         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
 
+                // Get the UTC offset for the current time, accounting for DST
+                var utcOffset = timeZoneInfo.GetUtcOffset(currentTime);
+                var offsetString = utcOffset.TotalHours >= 0 ? 
+                    $"UTC+{utcOffset.TotalHours:0}" : 
+                    $"UTC{utcOffset.TotalHours:0}";
+
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = $"{tz.Value} - {currentTime:D}",
+                    Subtitle = $"({offsetString}) {tz.Value} - {currentTime:D}",
                     Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
                 };
             })
