@@ -207,6 +207,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     {
         var timeZones = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
         var localTimeZone = TimeZoneInfo.Local;
+        int localIndex = -1;
+        int i = 0;
 
         var items = timeZones
             .Select(tz =>
@@ -233,6 +235,12 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     ? tz.Value.Substring(startIndex, endIndex - startIndex + 1)
                     : string.Empty;
 
+                if (tz.Key == localTimeZone.Id)
+                {
+                    localIndex = i;
+                }
+                i++;
+
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
@@ -242,12 +250,13 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             })
             .ToList();
 
-        // Ensure the local timezone is always at the top
-        var localTimeZoneItem = items.FirstOrDefault(item => item.Subtitle.Contains(localTimeZone.DisplayName));
-        if (localTimeZoneItem == null) return items;
-        items.Remove(localTimeZoneItem);
-        items.Insert(0, localTimeZoneItem);
+        // Ensure the local timezone is always at the top by timeZoneId
+        if (localIndex > 0 && localIndex < items.Count)
+        {
+            var localTimeZoneItem = items[localIndex];
+            items.RemoveAt(localIndex);
+            items.Insert(0, localTimeZoneItem);
+        }
         return items;
     }
-
 }
