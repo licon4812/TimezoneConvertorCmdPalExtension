@@ -43,12 +43,12 @@ The extension will list all time zones for the current date and time. With the l
 ![](./images/example1.png)
 
 Supported date and time formats:
-- `10:00 AM, London` (time only - uses current date)
-- `Nov 21 2025 1:53PM, London` (month name format)
-- `21 Nov 2025 1:53PM, London` (day month year format)
-- `21/11/2025 1:53PM, London` (DMY format: MM/DD/YYYY)
-- `11/21/2025 1:53PM, London` (MYK format: MM/DD/YYYY)
-- `2025-11-21 13:53, London` (ISO format)
+- `10:00 AM` (time only - uses current date)
+- `Nov 21 2025 1:53PM` (month name format)
+- `21 Nov 2025 1:53PM` (day month year format)
+- `21/11/2025 1:53PM` (DMY format: MM/DD/YYYY)
+- `11/21/2025 1:53PM` (MYK format: MM/DD/YYYY)
+- `2025-11-21 13:53` (ISO format)
 
 ### Convert from another time zone
 
