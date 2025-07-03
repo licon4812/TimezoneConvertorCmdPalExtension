@@ -98,8 +98,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         if (searchText.Contains("to"))
         {
             var parts = searchText.Split("to");
-            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate) ||
-                DateTime.TryParse(parts[0], out parsedDate))
+            if (DateTime.TryParse(parts[0], out var parsedDate) ||
+                DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out parsedDate))
             {
                 allTimeZones = GetAllTimeZonesWithLocalOnTop(parsedDate);
                 localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
@@ -117,8 +117,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         else if (searchText.Contains(','))
         {
             var parts = searchText.Split(",");
-            if (DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate) ||
-                DateTime.TryParse(parts[0], out parsedDate))
+            if (DateTime.TryParse(parts[0], out var parsedDate) ||
+                DateTime.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out parsedDate))
             {
                 var timeZoneNames = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
                 var timeZoneInfo = timeZoneNames.FirstOrDefault(tz => tz.Value.Contains(parts[1].Trim(), StringComparison.OrdinalIgnoreCase));
