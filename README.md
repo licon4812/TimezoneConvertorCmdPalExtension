@@ -75,7 +75,7 @@ For example, to convert 10:00 AM in London to your local time zone, type:
 Or to convert a specific date and time:
 
 ```
-Nov 21, 2025 1:53PM, London
+Nov 21 2025 1:53PM, London
 ```
 
 ![](./images/example2.png)
