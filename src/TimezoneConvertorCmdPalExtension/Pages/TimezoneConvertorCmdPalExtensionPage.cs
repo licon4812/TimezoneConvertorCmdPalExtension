@@ -182,6 +182,40 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     .ToList();
             }
         }
+        // Support for: <datetime> in <source timezone>
+        else if (searchText.Contains(" in ", StringComparison.OrdinalIgnoreCase))
+        {
+            var split = searchText.Split(new[] { " in " }, 2, StringSplitOptions.None);
+            var datePart = split[0].Trim();
+            var sourceTzPart = split[1].Trim();
+            if (TryParseDateWithFallback(datePart, out var parsedDate) && !string.IsNullOrWhiteSpace(sourceTzPart))
+            {
+                var timeZoneNames = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
+                var sourceTzInfo = timeZoneNames.FirstOrDefault(tz => tz.Value.Contains(sourceTzPart, StringComparison.OrdinalIgnoreCase));
+                if (sourceTzInfo.Key != null)
+                {
+                    var sourceTimeZone = TimeZoneInfo.FindSystemTimeZoneById(sourceTzInfo.Key);
+                    var dateTimeInSourceZone = DateTime.SpecifyKind(parsedDate, DateTimeKind.Unspecified);
+                    var utcTime = TimeZoneInfo.ConvertTimeToUtc(dateTimeInSourceZone, sourceTimeZone);
+                    var localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.Local);
+                    allTimeZones = GetAllTimeZonesWithLocalOnTop(localTime);
+                    // Optionally, highlight the source timezone and local timezone
+                    var sourceTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle.Contains(sourceTzPart, StringComparison.OrdinalIgnoreCase));
+                    localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
+                    if (sourceTimeZoneItem != null)
+                    {
+                        allTimeZones.Remove(sourceTimeZoneItem);
+                        allTimeZones.Insert(0, sourceTimeZoneItem);
+                    }
+                    if (localTimeZoneItem != null && !allTimeZones.Contains(localTimeZoneItem))
+                    {
+                        allTimeZones.Remove(localTimeZoneItem);
+                        allTimeZones.Insert(1, localTimeZoneItem);
+                    }
+                    return allTimeZones;
+                }
+            }
+        }
         else if (searchText.Contains(','))
         {
             var parts = searchText.Split(",");
