@@ -95,6 +95,16 @@ Examples:
 
 This will convert the specified date and time from the source time zone to the target time zone and display the result at the top.
 
+For example to convert 12:30pm on the 22nd of April 2025 from Arizona to London, type:
+
+2025-04-22 12:30pm 12:30 PM in Arizona to London
+
+**OR**
+
+2025-04-22 12:30pm 12:30 PM, Arizona to London
+
+![](./images/example4.png)
+
 ## License
 
 This project is licensed under the [MIT Licence](LICENCE).
