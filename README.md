@@ -86,7 +86,7 @@ For example, to convert 10:00 AM in your local time zone to London, type:
 
 To convert a time from one time zone to another, use either of the following formats:
 `<date and time>, <source time zone> to <target time zone>`
-`<date and time> in<source time zone> to <target time zone>`
+`<date and time> in <source time zone> to <target time zone>`
 Examples:
 - `10:00 AM, London to Tokyo`
 - `Nov 21 2025 1:53PM, London to Tokyo`
