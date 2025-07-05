@@ -143,29 +143,55 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var dateTimeInSourceZone = DateTime.SpecifyKind(parsedDate, DateTimeKind.Unspecified);
                     var utcTime = TimeZoneInfo.ConvertTimeToUtc(dateTimeInSourceZone, sourceTimeZone);
                     var targetTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, targetTimeZone);
+                    var localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.Local);
 
-                    // Build a single result for the conversion
-                    var timeAbbreviation = targetTimeZone.IsDaylightSavingTime(targetTime)
+                    // Build result items for target, source, and local
+                    var targetAbbr = targetTimeZone.IsDaylightSavingTime(targetTime)
                         ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(targetTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
                         : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(targetTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
-
-                    var utcOffset = targetTimeZone.GetUtcOffset(targetTime);
-                    var offsetString = utcOffset.TotalHours >= 0 ?
-                        $"(UTC+{utcOffset.TotalHours:0}:00)" :
-                        $"(UTC{utcOffset.TotalHours:0}:00)";
-
-                    var resultItem = new ListItem(new NoOpCommand())
+                    var targetOffset = targetTimeZone.GetUtcOffset(targetTime);
+                    var targetOffsetString = targetOffset.TotalHours >= 0 ?
+                        $"(UTC+{targetOffset.TotalHours:0}:00)" :
+                        $"(UTC{targetOffset.TotalHours:0}:00)";
+                    var targetItem = new ListItem(new NoOpCommand())
                     {
-                        Title = $"{targetTime:hh:mm tt} {timeAbbreviation}",
-                        Subtitle = $"{targetTzInfo.Value.Replace($"{offsetString}", offsetString)} - {targetTime:D}",
+                        Title = $"{targetTime:hh:mm tt} {targetAbbr}",
+                        Subtitle = $"{targetTzInfo.Value.Replace($"{targetOffsetString}", targetOffsetString)} - {targetTime:D}",
                         Command = new CopyTextCommand($"{targetTime:hh:mm tt}"),
                     };
 
-                    // Optionally, show all time zones for the converted time
-                    allTimeZones = GetAllTimeZonesWithLocalOnTop(targetTime);
-                    // Place the result at the top
-                    allTimeZones.Insert(0, resultItem);
-                    return allTimeZones;
+                    var sourceAbbr = sourceTimeZone.IsDaylightSavingTime(dateTimeInSourceZone)
+                        ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
+                        : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
+                    var sourceOffset = sourceTimeZone.GetUtcOffset(dateTimeInSourceZone);
+                    var sourceOffsetString = sourceOffset.TotalHours >= 0 ?
+                        $"(UTC+{sourceOffset.TotalHours:0}:00)" :
+                        $"(UTC{sourceOffset.TotalHours:0}:00)";
+                    var sourceItem = new ListItem(new NoOpCommand())
+                    {
+                        Title = $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)} - {dateTimeInSourceZone:D}",
+                        Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
+                    };
+
+                    var localAbbr = TimeZoneInfo.Local.IsDaylightSavingTime(localTime)
+                        ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
+                        : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
+                    var localOffset = TimeZoneInfo.Local.GetUtcOffset(localTime);
+                    var localOffsetString = localOffset.TotalHours >= 0 ?
+                        $"(UTC+{localOffset.TotalHours:0}:00)" :
+                        $"(UTC{localOffset.TotalHours:0}:00)";
+                    var localTzName = timeZoneNames.FirstOrDefault(tz => tz.Key == TimeZoneInfo.Local.Id).Value ?? TimeZoneInfo.Local.DisplayName;
+                    var localItem = new ListItem(new NoOpCommand())
+                    {
+                        Title = $"{localTime:hh:mm tt} {localAbbr}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)} - {localTime:D}",
+                        Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
+                    };
+
+                    // Only show target, source, and local
+                    var result = new List<ListItem> { targetItem, sourceItem, localItem };
+                    return result;
                 }
             }
             // fallback to previous logic if not both timezones found
@@ -198,21 +224,40 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var dateTimeInSourceZone = DateTime.SpecifyKind(parsedDate, DateTimeKind.Unspecified);
                     var utcTime = TimeZoneInfo.ConvertTimeToUtc(dateTimeInSourceZone, sourceTimeZone);
                     var localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.Local);
-                    allTimeZones = GetAllTimeZonesWithLocalOnTop(localTime);
-                    // Optionally, highlight the source timezone and local timezone
-                    var sourceTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle.Contains(sourceTzPart, StringComparison.OrdinalIgnoreCase));
-                    localTimeZoneItem = allTimeZones.FirstOrDefault(item => item.Subtitle == TimeZoneInfo.Local.DisplayName);
-                    if (sourceTimeZoneItem != null)
+
+                    // Build result items for source and local
+                    var sourceAbbr = sourceTimeZone.IsDaylightSavingTime(dateTimeInSourceZone)
+                        ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
+                        : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
+                    var sourceOffset = sourceTimeZone.GetUtcOffset(dateTimeInSourceZone);
+                    var sourceOffsetString = sourceOffset.TotalHours >= 0 ?
+                        $"(UTC+{sourceOffset.TotalHours:0}:00)" :
+                        $"(UTC{sourceOffset.TotalHours:0}:00)";
+                    var sourceItem = new ListItem(new NoOpCommand())
                     {
-                        allTimeZones.Remove(sourceTimeZoneItem);
-                        allTimeZones.Insert(0, sourceTimeZoneItem);
-                    }
-                    if (localTimeZoneItem != null && !allTimeZones.Contains(localTimeZoneItem))
+                        Title = $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)} - {dateTimeInSourceZone:D}",
+                        Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
+                    };
+
+                    var localAbbr = TimeZoneInfo.Local.IsDaylightSavingTime(localTime)
+                        ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
+                        : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
+                    var localOffset = TimeZoneInfo.Local.GetUtcOffset(localTime);
+                    var localOffsetString = localOffset.TotalHours >= 0 ?
+                        $"(UTC+{localOffset.TotalHours:0}:00)" :
+                        $"(UTC{localOffset.TotalHours:0}:00)";
+                    var localTzName = timeZoneNames.FirstOrDefault(tz => tz.Key == TimeZoneInfo.Local.Id).Value ?? TimeZoneInfo.Local.DisplayName;
+                    var localItem = new ListItem(new NoOpCommand())
                     {
-                        allTimeZones.Remove(localTimeZoneItem);
-                        allTimeZones.Insert(1, localTimeZoneItem);
-                    }
-                    return allTimeZones;
+                        Title = $"{localTime:hh:mm tt} {localAbbr}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)} - {localTime:D}",
+                        Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
+                    };
+
+                    // Only show source and local
+                    var result = new List<ListItem> { sourceItem, localItem };
+                    return result;
                 }
             }
         }
