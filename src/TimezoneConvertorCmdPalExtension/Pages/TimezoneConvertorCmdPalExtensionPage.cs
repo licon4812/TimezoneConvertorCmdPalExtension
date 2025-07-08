@@ -2,14 +2,16 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.CommandPalette.Extensions;
+using Microsoft.CommandPalette.Extensions.Toolkit;
+using NodaTime;
+using NodaTime.TimeZones;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Microsoft.CommandPalette.Extensions;
-using Microsoft.CommandPalette.Extensions.Toolkit;
 using Windows.ApplicationModel;
 
 namespace TimezoneConvertorCmdPalExtension.Pages;
@@ -47,7 +49,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                 catch
                 {
                     _isError = true;
-                    _results = Array.Empty<ListItem>();
+                    _results = [];
                 }
                 finally
                 {
@@ -374,6 +376,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     $"(UTC+{utcOffset.TotalHours:0}:00)" :
                     $"(UTC{utcOffset.TotalHours:0}:00)";
 
+
                 // Fix CA1310 and CA1866 by using IndexOf(char, StringComparison)
                 var startIndex = tz.Value.IndexOf('(', StringComparison.Ordinal);
                 var endIndex = tz.Value.IndexOf(')', StringComparison.Ordinal);
@@ -390,7 +393,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} - {currentTime:D}",
+                    Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)}, {GetCountriesFromTimeZoneAsAString(offsetString)} - {currentTime:D}",
                     Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
                 };
             })
@@ -404,5 +407,30 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             items.Insert(0, localTimeZoneItem);
         }
         return items;
+    }
+
+    private static string? GetCountriesFromTimeZoneAsAString(string timezoneOffset)
+    {
+        // Define the UTC offset you're interested in
+        var targetOffset = Offset.FromHours(10); // e.g., UTC+10
+
+        // Get the TZDB source and all zone locations
+        var tzdb = TzdbDateTimeZoneSource.Default;
+        var now = SystemClock.Instance.GetCurrentInstant();
+
+        // Check for null before using ZoneLocations
+        if (tzdb.ZoneLocations == null)
+        {
+            return null;
+        }
+
+        var countries = tzdb.ZoneLocations
+            .Where(loc =>
+            {
+                var zone = DateTimeZoneProviders.Tzdb[loc.ZoneId];
+                var interval = zone.GetZoneInterval(now);
+                return interval.StandardOffset == targetOffset;
+            }).Distinct().ToList();
+        return countries.Count > 0 ? $"{string.Join(", ", countries)}" : string.Empty;
     }
 }
