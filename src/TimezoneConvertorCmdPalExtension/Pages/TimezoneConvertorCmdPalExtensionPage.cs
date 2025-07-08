@@ -158,7 +158,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var targetItem = new ListItem(new NoOpCommand())
                     {
                         Title = $"{targetTime:hh:mm tt} {targetAbbr}",
-                        Subtitle = $"{targetTzInfo.Value.Replace($"{targetOffsetString}", targetOffsetString)} - {targetTime:D}",
+                        Subtitle = $"{targetTzInfo.Value.Replace($"{targetOffsetString}", targetOffsetString)}, {GetCountriesFromTimeZoneAsAString(targetOffsetString)} - {targetTime:D}",
                         Command = new CopyTextCommand($"{targetTime:hh:mm tt}"),
                     };
 
@@ -172,7 +172,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var sourceItem = new ListItem(new NoOpCommand())
                     {
                         Title = $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
-                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)} - {dateTimeInSourceZone:D}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)}, {GetCountriesFromTimeZoneAsAString(sourceOffsetString)} - {dateTimeInSourceZone:D}",
                         Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
                     };
 
@@ -187,7 +187,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var localItem = new ListItem(new NoOpCommand())
                     {
                         Title = $"{localTime:hh:mm tt} {localAbbr}",
-                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)} - {localTime:D}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)}, {GetCountriesFromTimeZoneAsAString(localOffsetString)} - {localTime:D}",
                         Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
                     };
 
@@ -238,7 +238,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var sourceItem = new ListItem(new NoOpCommand())
                     {
                         Title = $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
-                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)} - {dateTimeInSourceZone:D}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)}, {GetCountriesFromTimeZoneAsAString(sourceOffsetString)} - {dateTimeInSourceZone:D}",
                         Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
                     };
 
@@ -253,7 +253,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var localItem = new ListItem(new NoOpCommand())
                     {
                         Title = $"{localTime:hh:mm tt} {localAbbr}",
-                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)} - {localTime:D}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)}, {GetCountriesFromTimeZoneAsAString(localOffsetString)} - {localTime:D}",
                         Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
                     };
 
@@ -409,7 +409,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         return items;
     }
 
-    private static string? GetCountriesFromTimeZoneAsAString(string timezoneOffset)
+    private static string GetCountriesFromTimeZoneAsAString(string timezoneOffset)
     {
         // Define the UTC offset you're interested in
         var targetOffset = Offset.FromHours(10); // e.g., UTC+10
@@ -421,7 +421,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         // Check for null before using ZoneLocations
         if (tzdb.ZoneLocations == null)
         {
-            return null;
+            return string.Empty;
         }
 
         var countries = tzdb.ZoneLocations
@@ -429,8 +429,8 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             {
                 var zone = DateTimeZoneProviders.Tzdb[loc.ZoneId];
                 var interval = zone.GetZoneInterval(now);
-                return interval.StandardOffset == targetOffset;
-            }).Distinct().ToList();
+                return interval.StandardOffset == targetOffset || interval.Savings == targetOffset;
+            }).Select(loc => loc.CountryName).Distinct().ToList();
         return countries.Count > 0 ? $"{string.Join(", ", countries)}" : string.Empty;
     }
 }
