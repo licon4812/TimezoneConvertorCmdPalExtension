@@ -23,14 +23,13 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private bool _isError;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly BufferBlock<string> _searchTextBuffer = new();
-    private IReadOnlyList<ListItem> _results = GetAllTimeZonesWithLocalOnTop(DateTime.UtcNow);
+    private IReadOnlyList<ListItem> _results;
 
     [GeneratedRegex(@"UTC([+-]\d{1,2}):00")]
     private static partial Regex TimezoneOffsetRegex();
 
     public TimezoneConvertorCmdPalExtensionPage()
     {
-
         // Retrieve the app version
         var version = Package.Current.Id.Version;
         var appVersion = $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
@@ -38,6 +37,9 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         Icon = new IconInfo("\uE775");
         Title = $"Timezone Convertor - v{appVersion}";
         Name = "Convert";
+
+        // Set initial results with local timezone on top
+        _results = GetAllTimeZonesWithLocalOnTop(DateTime.Now);
 
         // Configure the search processing pipeline
         Task.Run(async () =>
@@ -389,66 +391,50 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private static List<ListItem> GetAllTimeZonesWithLocalOnTop(DateTime dateTime)
     {
         var timeZones = TimeZoneNames.TZNames.GetDisplayNames(System.Globalization.CultureInfo.CurrentUICulture.Name);
-        var localTimeZone = TimeZoneInfo.Local;
-        int localIndex = -1;
-        int i = 0;
+        var localTimeZoneId = TimeZoneInfo.Local.Id;
 
-        var items = timeZones
-            .Select(tz =>
-            {
-                var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tz.Key);
-                var currentTime = TimeZoneInfo.ConvertTime(dateTime, timeZoneInfo);
-
-                var timeAbbreviation = timeZoneInfo.IsDaylightSavingTime(currentTime)
-                    ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
-                        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
-                    : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
-                        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
-
-                // Get the UTC offset for the current time, accounting for DST
-                var utcOffset = timeZoneInfo.GetUtcOffset(currentTime);
-                // Use custom formatting to support half-hour and quarter-hour offsets
-                var offsetSign = utcOffset.TotalMinutes >= 0 ? "+" : "-";
-                var absHours = Math.Abs(utcOffset.Hours);
-                var absMinutes = Math.Abs(utcOffset.Minutes);
-                var offsetString = $"(UTC{offsetSign}{absHours}:{absMinutes:00})";
-
-                // Fix CA1310 and CA1866 by using IndexOf(char, StringComparison)
-                var startIndex = tz.Value.IndexOf('(', StringComparison.Ordinal);
-                var endIndex = tz.Value.IndexOf(')', StringComparison.Ordinal);
-                var subString = startIndex >= 0 && endIndex > startIndex
-                    ? tz.Value.Substring(startIndex, endIndex - startIndex + 1)
-                    : string.Empty;
-
-                if (tz.Key == localTimeZone.Id)
-                {
-                    localIndex = i;
-                }
-                i++;
-
-                if (string.IsNullOrEmpty(timeAbbreviation))
-                {
-                    return null;
-                }
-
-                return new ListItem(new NoOpCommand())
-                {
-                    Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} {GetCountriesFromTimeZoneAsAString(offsetString, timeAbbreviation)} - {currentTime:D}",
-                    Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
-                };
-            })
-            .Where(item => item != null)
-            .ToList();
-
-        // Ensure the local timezone is always at the top by timeZoneId
-        if (localIndex > 0 && localIndex < items.Count)
+        // Build a list of (ListItem, timeZoneId) only for valid time zones
+        var itemsWithId = new List<(ListItem, string)>();
+        foreach (var tz in timeZones)
         {
-            var localTimeZoneItem = items[localIndex];
-            items.RemoveAt(localIndex);
-            items.Insert(0, localTimeZoneItem);
+            var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tz.Key);
+            var currentTime = TimeZoneInfo.ConvertTime(dateTime, timeZoneInfo);
+            var timeAbbreviation = timeZoneInfo.IsDaylightSavingTime(currentTime)
+                ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
+                    System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
+                : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(tz.Key,
+                    System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
+            // Get the UTC offset for the current time, accounting for DST
+            var utcOffset = timeZoneInfo.GetUtcOffset(currentTime);
+            var offsetSign = utcOffset.TotalMinutes >= 0 ? "+" : "-";
+            var absHours = Math.Abs(utcOffset.Hours);
+            var absMinutes = Math.Abs(utcOffset.Minutes);
+            var offsetString = $"(UTC{offsetSign}{absHours}:{absMinutes:00})";
+            var startIndex = tz.Value.IndexOf('(', StringComparison.Ordinal);
+            var endIndex = tz.Value.IndexOf(')', StringComparison.Ordinal);
+            var subString = startIndex >= 0 && endIndex > startIndex
+                ? tz.Value.Substring(startIndex, endIndex - startIndex + 1)
+                : string.Empty;
+            // Always include the local time zone, even if abbreviation is empty
+            if (tz.Key != localTimeZoneId && string.IsNullOrEmpty(timeAbbreviation))
+                continue;
+            var item = new ListItem(new NoOpCommand())
+            {
+                Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
+                Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} {GetCountriesFromTimeZoneAsAString(offsetString, timeAbbreviation)} - {currentTime:D}",
+                Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
+            };
+            itemsWithId.Add((item, tz.Key));
         }
-        return items;
+        // Find the local time zone item by ID
+        int localIdx = itemsWithId.FindIndex(x => x.Item2 == localTimeZoneId);
+        if (localIdx > 0)
+        {
+            var localItem = itemsWithId[localIdx];
+            itemsWithId.RemoveAt(localIdx);
+            itemsWithId.Insert(0, localItem);
+        }
+        return itemsWithId.Select(x => x.Item1).ToList();
     }
 
     private static string GetCountriesFromTimeZoneAsAString(string timezoneOffset, string abbreviation)
