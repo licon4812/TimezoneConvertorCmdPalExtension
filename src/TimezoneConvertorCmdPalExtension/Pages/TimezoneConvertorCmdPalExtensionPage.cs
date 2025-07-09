@@ -25,7 +25,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private readonly BufferBlock<string> _searchTextBuffer = new();
     private IReadOnlyList<ListItem> _results;
 
-    [GeneratedRegex(@"UTC([+-]\d{1,2}):00")]
+    [GeneratedRegex(@"UTC([+-]\d{1,2})(?::(\d{2}))?")]
     private static partial Regex TimezoneOffsetRegex();
 
     public TimezoneConvertorCmdPalExtensionPage()
@@ -439,14 +439,17 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
 
     private static string GetCountriesFromTimeZoneAsAString(string timezoneOffset, string abbreviation)
     {
-        // Extract the offset part, e.g., "+2:00" or "-5:00"
+        // Extract the offset part, e.g., "+2:00" or "-5:00" or "+9:30"
         var offsetMatch = TimezoneOffsetRegex().Match(timezoneOffset);
         Offset targetOffset;
         if (offsetMatch.Success)
         {
-            // Parse the offset using NodaTime's Offset.FromHours
+            // Compose the offset string for NodaTime
+            var hourPart = offsetMatch.Groups[1].Value;
+            var minutePart = offsetMatch.Groups[2].Success ? offsetMatch.Groups[2].Value : "00";
+            var nodaOffsetString = $"{hourPart}:{minutePart}";
             if (!OffsetPattern.CreateWithInvariantCulture("+H:mm")
-                    .Parse(offsetMatch.Groups[1].Value + ":00")
+                    .Parse(nodaOffsetString)
                     .TryGetValue(Offset.Zero, out targetOffset))
             {
                 return string.Empty;
