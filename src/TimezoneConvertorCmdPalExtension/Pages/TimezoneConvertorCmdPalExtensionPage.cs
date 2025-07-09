@@ -167,7 +167,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         Title = string.IsNullOrEmpty(targetAbbr)
                             ? $"{targetTime:hh:mm tt}"
                             : $"{targetTime:hh:mm tt} {targetAbbr}",
-                        Subtitle = $"{targetTzInfo.Value.Replace($"{targetOffsetString}", targetOffsetString)}, {GetCountriesFromTimeZoneAsAString(targetOffsetString, targetAbbr)} - {targetTime:D}",
+                        Subtitle = $"{targetTzInfo.Value.Replace($"{targetOffsetString}", targetOffsetString)}, {GetCountriesFromTimeZoneAsAString(targetTzInfo, targetTime)} - {targetTime:D}",
                         Command = new CopyTextCommand($"{targetTime:hh:mm tt}"),
                     };
 
@@ -183,7 +183,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         Title = string.IsNullOrEmpty(sourceAbbr)
                             ? $"{dateTimeInSourceZone:hh:mm tt}"
                             : $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
-                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)}, {GetCountriesFromTimeZoneAsAString(sourceOffsetString, sourceAbbr)} - {dateTimeInSourceZone:D}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)}, {GetCountriesFromTimeZoneAsAString(sourceTzInfo, dateTimeInSourceZone)} - {dateTimeInSourceZone:D}",
                         Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
                     };
 
@@ -200,7 +200,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         Title = string.IsNullOrEmpty(localAbbr)
                             ? $"{localTime:hh:mm tt}"
                             : $"{localTime:hh:mm tt} {localAbbr}",
-                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)}, {GetCountriesFromTimeZoneAsAString(localOffsetString, localAbbr)} - {localTime:D}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)}, {GetCountriesFromTimeZoneAsAString(new KeyValuePair<string, string>(TimeZoneInfo.Local.Id, localTzName), localTime)} - {localTime:D}",
                         Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
                     };
 
@@ -265,7 +265,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         Title = string.IsNullOrEmpty(sourceAbbr)
                             ? $"{dateTimeInSourceZone:hh:mm tt}"
                             : $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
-                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)} {GetCountriesFromTimeZoneAsAString(sourceOffsetString, sourceAbbr)} - {dateTimeInSourceZone:D}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)} {GetCountriesFromTimeZoneAsAString(sourceTzInfo, dateTimeInSourceZone)} - {dateTimeInSourceZone:D}",
                         Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
                     };
 
@@ -282,7 +282,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         Title = string.IsNullOrEmpty(localAbbr)
                             ? $"{localTime:hh:mm tt}"
                             : $"{localTime:hh:mm tt} {localAbbr}",
-                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)} {GetCountriesFromTimeZoneAsAString(localOffsetString, localAbbr)} - {localTime:D}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)} {GetCountriesFromTimeZoneAsAString(new KeyValuePair<string, string>(TimeZoneInfo.Local.Id, localTzName), localTime)} - {localTime:D}",
                         Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
                     };
 
@@ -421,7 +421,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             var item = new ListItem(new NoOpCommand())
             {
                 Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} {GetCountriesFromTimeZoneAsAString(offsetString, timeAbbreviation)} - {currentTime:D}",
+                Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} {GetCountriesFromTimeZoneAsAString(tz, currentTime)} - {currentTime:D}",
                 Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
             };
             itemsWithId.Add((item, tz.Key));
@@ -437,44 +437,22 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         return itemsWithId.Select(x => x.Item1).ToList();
     }
 
-    private static string GetCountriesFromTimeZoneAsAString(string timezoneOffset, string abbreviation)
+    private static string GetCountriesFromTimeZoneAsAString(KeyValuePair<string, string> tz, DateTime currentTime)
     {
-        // Extract the offset part, e.g., "+2:00" or "-5:00" or "+9:30"
-        var offsetMatch = TimezoneOffsetRegex().Match(timezoneOffset);
-        Offset targetOffset;
-        if (offsetMatch.Success)
-        {
-            // Compose the offset string for NodaTime
-            var hourPart = offsetMatch.Groups[1].Value;
-            var minutePart = offsetMatch.Groups[2].Success ? offsetMatch.Groups[2].Value : "00";
-            var nodaOffsetString = $"{hourPart}:{minutePart}";
-            if (!OffsetPattern.CreateWithInvariantCulture("+H:mm")
-                    .Parse(nodaOffsetString)
-                    .TryGetValue(Offset.Zero, out targetOffset))
-            {
-                return string.Empty;
-            }
-        }
-        else
-        {
-            return string.Empty;
-        }
-
         var tzdb = TzdbDateTimeZoneSource.Default;
-        var now = SystemClock.Instance.GetCurrentInstant();
-        if (tzdb.ZoneLocations == null)
-        {
-            return string.Empty;
-        }
+        var zoneId = TimeZoneConverter.TZConvert.WindowsToIana(tz.Key);
+        var displayName = tz.Value;
+        var zone = DateTimeZoneProviders.Tzdb[zoneId];
+        var interval = zone.GetZoneInterval(Instant.FromDateTimeUtc(currentTime.ToUniversalTime()));
+        var abbrs = TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(zoneId, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
 
+        // Standard time: match only by abbreviation
         var countries = tzdb.ZoneLocations
             .Where(loc =>
             {
-                var zone = DateTimeZoneProviders.Tzdb[loc.ZoneId];
-                var interval = zone.GetZoneInterval(now);
-                var abbr = interval.Name;
-                var abbrMatch = string.IsNullOrEmpty(abbreviation) || abbr.Equals(abbreviation, StringComparison.OrdinalIgnoreCase);
-                return abbrMatch;
+                var z = DateTimeZoneProviders.Tzdb[loc.ZoneId];
+                var i = z.GetZoneInterval(Instant.FromDateTimeUtc(currentTime.ToUniversalTime()));
+                return i.Name.Equals(abbrs.Standard, StringComparison.OrdinalIgnoreCase);
             })
             .Select(loc => loc.CountryName).Distinct().ToList();
         var countriesString = countries.Count == 0 ? string.Empty : string.Join(", ", countries);
