@@ -13,6 +13,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Windows.ApplicationModel;
+using NodaTime.Text;
+using System.Text.RegularExpressions;
 
 namespace TimezoneConvertorCmdPalExtension.Pages;
 
@@ -22,6 +24,9 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly BufferBlock<string> _searchTextBuffer = new();
     private IReadOnlyList<ListItem> _results = GetAllTimeZonesWithLocalOnTop(DateTime.UtcNow);
+
+    [GeneratedRegex(@"UTC([+-]\d{1,2}):00")]
+    private static partial Regex TimezoneOffsetRegex();
 
     public TimezoneConvertorCmdPalExtensionPage()
     {
@@ -115,10 +120,10 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             string afterTo = searchText[(searchText.IndexOf("to", StringComparison.OrdinalIgnoreCase) + 2)..].Trim();
 
             string datePart = beforeTo;
-            string sourceTzPart = null;
+            string? sourceTzPart = null;
 
             // Handle ", <source timezone>" or "in<source timezone>"
-            if (beforeTo.Contains(","))
+            if (beforeTo.Contains(','))
             {
                 var split = beforeTo.Split(',', 2);
                 datePart = split[0].Trim();
@@ -126,7 +131,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             }
             else if (beforeTo.Contains(" in", StringComparison.OrdinalIgnoreCase))
             {
-                var split = beforeTo.Split(new[] { " in" }, 2, StringSplitOptions.None);
+                var split = beforeTo.Split([" in"], 2, StringSplitOptions.None);
                 datePart = split[0].Trim();
                 sourceTzPart = split[1].Trim();
             }
@@ -157,8 +162,10 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         $"(UTC{targetOffset.TotalHours:0}:00)";
                     var targetItem = new ListItem(new NoOpCommand())
                     {
-                        Title = $"{targetTime:hh:mm tt} {targetAbbr}",
-                        Subtitle = $"{targetTzInfo.Value.Replace($"{targetOffsetString}", targetOffsetString)}, {GetCountriesFromTimeZoneAsAString(targetOffsetString)} - {targetTime:D}",
+                        Title = string.IsNullOrEmpty(targetAbbr)
+                            ? $"{targetTime:hh:mm tt}"
+                            : $"{targetTime:hh:mm tt} {targetAbbr}",
+                        Subtitle = $"{targetTzInfo.Value.Replace($"{targetOffsetString}", targetOffsetString)}, {GetCountriesFromTimeZoneAsAString(targetOffsetString, targetAbbr)} - {targetTime:D}",
                         Command = new CopyTextCommand($"{targetTime:hh:mm tt}"),
                     };
 
@@ -171,8 +178,10 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         $"(UTC{sourceOffset.TotalHours:0}:00)";
                     var sourceItem = new ListItem(new NoOpCommand())
                     {
-                        Title = $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
-                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)}, {GetCountriesFromTimeZoneAsAString(sourceOffsetString)} - {dateTimeInSourceZone:D}",
+                        Title = string.IsNullOrEmpty(sourceAbbr)
+                            ? $"{dateTimeInSourceZone:hh:mm tt}"
+                            : $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)}, {GetCountriesFromTimeZoneAsAString(sourceOffsetString, sourceAbbr)} - {dateTimeInSourceZone:D}",
                         Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
                     };
 
@@ -186,13 +195,27 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var localTzName = timeZoneNames.FirstOrDefault(tz => tz.Key == TimeZoneInfo.Local.Id).Value ?? TimeZoneInfo.Local.DisplayName;
                     var localItem = new ListItem(new NoOpCommand())
                     {
-                        Title = $"{localTime:hh:mm tt} {localAbbr}",
-                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)}, {GetCountriesFromTimeZoneAsAString(localOffsetString)} - {localTime:D}",
+                        Title = string.IsNullOrEmpty(localAbbr)
+                            ? $"{localTime:hh:mm tt}"
+                            : $"{localTime:hh:mm tt} {localAbbr}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)}, {GetCountriesFromTimeZoneAsAString(localOffsetString, localAbbr)} - {localTime:D}",
                         Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
                     };
 
-                    // Only show target, source, and local
-                    var result = new List<ListItem> { targetItem, sourceItem, localItem };
+                    // Only show target, source, and local if their abbreviations are not null or empty
+                    var result = new List<ListItem>();
+                    if (!string.IsNullOrEmpty(targetAbbr))
+                    {
+                        result.Add(targetItem);
+                    }
+                    if (!string.IsNullOrEmpty(sourceAbbr))
+                    {
+                        result.Add(sourceItem);
+                    }
+                    if (!string.IsNullOrEmpty(localAbbr))
+                    {
+                        result.Add(localItem);
+                    }
                     return result;
                 }
             }
@@ -213,7 +236,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         // Support for: <datetime> in <source timezone>
         else if (searchText.Contains(" in ", StringComparison.OrdinalIgnoreCase))
         {
-            var split = searchText.Split(new[] { " in " }, 2, StringSplitOptions.None);
+            var split = searchText.Split([" in "], 2, StringSplitOptions.None);
             var datePart = split[0].Trim();
             var sourceTzPart = split[1].Trim();
             if (TryParseDateWithFallback(datePart, out var parsedDate) && !string.IsNullOrWhiteSpace(sourceTzPart))
@@ -237,8 +260,10 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         $"(UTC{sourceOffset.TotalHours:0}:00)";
                     var sourceItem = new ListItem(new NoOpCommand())
                     {
-                        Title = $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
-                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)}, {GetCountriesFromTimeZoneAsAString(sourceOffsetString)} - {dateTimeInSourceZone:D}",
+                        Title = string.IsNullOrEmpty(sourceAbbr)
+                            ? $"{dateTimeInSourceZone:hh:mm tt}"
+                            : $"{dateTimeInSourceZone:hh:mm tt} {sourceAbbr}",
+                        Subtitle = $"{sourceTzInfo.Value.Replace($"{sourceOffsetString}", sourceOffsetString)} {GetCountriesFromTimeZoneAsAString(sourceOffsetString, sourceAbbr)} - {dateTimeInSourceZone:D}",
                         Command = new CopyTextCommand($"{dateTimeInSourceZone:hh:mm tt}"),
                     };
 
@@ -252,13 +277,23 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     var localTzName = timeZoneNames.FirstOrDefault(tz => tz.Key == TimeZoneInfo.Local.Id).Value ?? TimeZoneInfo.Local.DisplayName;
                     var localItem = new ListItem(new NoOpCommand())
                     {
-                        Title = $"{localTime:hh:mm tt} {localAbbr}",
-                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)}, {GetCountriesFromTimeZoneAsAString(localOffsetString)} - {localTime:D}",
+                        Title = string.IsNullOrEmpty(localAbbr)
+                            ? $"{localTime:hh:mm tt}"
+                            : $"{localTime:hh:mm tt} {localAbbr}",
+                        Subtitle = $"{localTzName.Replace($"{localOffsetString}", localOffsetString)} {GetCountriesFromTimeZoneAsAString(localOffsetString, localAbbr)} - {localTime:D}",
                         Command = new CopyTextCommand($"{localTime:hh:mm tt}"),
                     };
 
-                    // Only show source and local
-                    var result = new List<ListItem> { sourceItem, localItem };
+                    // Only show source and local if their abbreviations are not null or empty
+                    var result = new List<ListItem>();
+                    if (!string.IsNullOrEmpty(sourceAbbr))
+                    {
+                        result.Add(sourceItem);
+                    }
+                    if (!string.IsNullOrEmpty(localAbbr))
+                    {
+                        result.Add(localItem);
+                    }
                     return result;
                 }
             }
@@ -376,7 +411,6 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                     $"(UTC+{utcOffset.TotalHours:0}:00)" :
                     $"(UTC{utcOffset.TotalHours:0}:00)";
 
-
                 // Fix CA1310 and CA1866 by using IndexOf(char, StringComparison)
                 var startIndex = tz.Value.IndexOf('(', StringComparison.Ordinal);
                 var endIndex = tz.Value.IndexOf(')', StringComparison.Ordinal);
@@ -390,13 +424,19 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                 }
                 i++;
 
+                if (string.IsNullOrEmpty(timeAbbreviation))
+                {
+                    return null;
+                }
+
                 return new ListItem(new NoOpCommand())
                 {
                     Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                    Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)}, {GetCountriesFromTimeZoneAsAString(offsetString)} - {currentTime:D}",
+                    Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} {GetCountriesFromTimeZoneAsAString(offsetString, timeAbbreviation)} - {currentTime:D}",
                     Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
                 };
             })
+            .Where(item => item != null)
             .ToList();
 
         // Ensure the local timezone is always at the top by timeZoneId
@@ -409,16 +449,28 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         return items;
     }
 
-    private static string GetCountriesFromTimeZoneAsAString(string timezoneOffset)
+    private static string GetCountriesFromTimeZoneAsAString(string timezoneOffset, string abbreviation)
     {
-        // Define the UTC offset you're interested in
-        var targetOffset = Offset.FromHours(10); // e.g., UTC+10
+        // Extract the offset part, e.g., "+2:00" or "-5:00"
+        var offsetMatch = TimezoneOffsetRegex().Match(timezoneOffset);
+        Offset targetOffset;
+        if (offsetMatch.Success)
+        {
+            // Parse the offset using NodaTime's Offset.FromHours
+            if (!OffsetPattern.CreateWithInvariantCulture("+H:mm")
+                    .Parse(offsetMatch.Groups[1].Value + ":00")
+                    .TryGetValue(Offset.Zero, out targetOffset))
+            {
+                return string.Empty;
+            }
+        }
+        else
+        {
+            return string.Empty;
+        }
 
-        // Get the TZDB source and all zone locations
         var tzdb = TzdbDateTimeZoneSource.Default;
         var now = SystemClock.Instance.GetCurrentInstant();
-
-        // Check for null before using ZoneLocations
         if (tzdb.ZoneLocations == null)
         {
             return string.Empty;
@@ -429,8 +481,12 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             {
                 var zone = DateTimeZoneProviders.Tzdb[loc.ZoneId];
                 var interval = zone.GetZoneInterval(now);
-                return interval.StandardOffset == targetOffset || interval.Savings == targetOffset;
-            }).Select(loc => loc.CountryName).Distinct().ToList();
-        return countries.Count > 0 ? $"{string.Join(", ", countries)}" : string.Empty;
+                var abbr = interval.Name;
+                var abbrMatch = string.IsNullOrEmpty(abbreviation) || abbr.Equals(abbreviation, StringComparison.OrdinalIgnoreCase);
+                return (interval.StandardOffset == targetOffset || interval.Savings == targetOffset) && abbrMatch;
+            })
+            .Select(loc => loc.CountryName).Distinct().ToList();
+        var countriesString = countries.Count == 0 ? string.Empty : string.Join(", ", countries);
+        return string.IsNullOrEmpty(countriesString) ? string.Empty : $", {countriesString}";
     }
 }
