@@ -157,9 +157,9 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(targetTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
                         : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(targetTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
                     var targetOffset = targetTimeZone.GetUtcOffset(targetTime);
-                    var targetOffsetString = targetOffset.TotalHours >= 0 ?
-                        $"(UTC+{targetOffset.TotalHours:0}:00)" :
-                        $"(UTC{targetOffset.TotalHours:0}:00)";
+                    var targetOffsetString = targetOffset.TotalMinutes >= 0 ?
+                        $"(UTC+{Math.Abs(targetOffset.Hours)}:{Math.Abs(targetOffset.Minutes):00})" :
+                        $"(UTC-{Math.Abs(targetOffset.Hours)}:{Math.Abs(targetOffset.Minutes):00})";
                     var targetItem = new ListItem(new NoOpCommand())
                     {
                         Title = string.IsNullOrEmpty(targetAbbr)
@@ -173,9 +173,9 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
                         : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
                     var sourceOffset = sourceTimeZone.GetUtcOffset(dateTimeInSourceZone);
-                    var sourceOffsetString = sourceOffset.TotalHours >= 0 ?
-                        $"(UTC+{sourceOffset.TotalHours:0}:00)" :
-                        $"(UTC{sourceOffset.TotalHours:0}:00)";
+                    var sourceOffsetString = sourceOffset.TotalMinutes >= 0 ?
+                        $"(UTC+{Math.Abs(sourceOffset.Hours)}:{Math.Abs(sourceOffset.Minutes):00})" :
+                        $"(UTC-{Math.Abs(sourceOffset.Hours)}:{Math.Abs(sourceOffset.Minutes):00})";
                     var sourceItem = new ListItem(new NoOpCommand())
                     {
                         Title = string.IsNullOrEmpty(sourceAbbr)
@@ -189,9 +189,9 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
                         : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
                     var localOffset = TimeZoneInfo.Local.GetUtcOffset(localTime);
-                    var localOffsetString = localOffset.TotalHours >= 0 ?
-                        $"(UTC+{localOffset.TotalHours:0}:00)" :
-                        $"(UTC{localOffset.TotalHours:0}:00)";
+                    var localOffsetString = localOffset.TotalMinutes >= 0 ?
+                        $"(UTC+{Math.Abs(localOffset.Hours)}:{Math.Abs(localOffset.Minutes):00})" :
+                        $"(UTC-{Math.Abs(localOffset.Hours)}:{Math.Abs(localOffset.Minutes):00})";
                     var localTzName = timeZoneNames.FirstOrDefault(tz => tz.Key == TimeZoneInfo.Local.Id).Value ?? TimeZoneInfo.Local.DisplayName;
                     var localItem = new ListItem(new NoOpCommand())
                     {
@@ -255,9 +255,9 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
                         : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(sourceTzInfo.Key, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
                     var sourceOffset = sourceTimeZone.GetUtcOffset(dateTimeInSourceZone);
-                    var sourceOffsetString = sourceOffset.TotalHours >= 0 ?
-                        $"(UTC+{sourceOffset.TotalHours:0}:00)" :
-                        $"(UTC{sourceOffset.TotalHours:0}:00)";
+                    var sourceOffsetString = sourceOffset.TotalMinutes >= 0 ?
+                        $"(UTC+{Math.Abs(sourceOffset.Hours)}:{Math.Abs(sourceOffset.Minutes):00})" :
+                        $"(UTC-{Math.Abs(sourceOffset.Hours)}:{Math.Abs(sourceOffset.Minutes):00})";
                     var sourceItem = new ListItem(new NoOpCommand())
                     {
                         Title = string.IsNullOrEmpty(sourceAbbr)
@@ -271,9 +271,9 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                         ? TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Daylight
                         : TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName).Standard;
                     var localOffset = TimeZoneInfo.Local.GetUtcOffset(localTime);
-                    var localOffsetString = localOffset.TotalHours >= 0 ?
-                        $"(UTC+{localOffset.TotalHours:0}:00)" :
-                        $"(UTC{localOffset.TotalHours:0}:00)";
+                    var localOffsetString = localOffset.TotalMinutes >= 0 ?
+                        $"(UTC+{Math.Abs(localOffset.Hours)}:{Math.Abs(localOffset.Minutes):00})" :
+                        $"(UTC-{Math.Abs(localOffset.Hours)}:{Math.Abs(localOffset.Minutes):00})";
                     var localTzName = timeZoneNames.FirstOrDefault(tz => tz.Key == TimeZoneInfo.Local.Id).Value ?? TimeZoneInfo.Local.DisplayName;
                     var localItem = new ListItem(new NoOpCommand())
                     {
@@ -407,9 +407,11 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
 
                 // Get the UTC offset for the current time, accounting for DST
                 var utcOffset = timeZoneInfo.GetUtcOffset(currentTime);
-                var offsetString = utcOffset.TotalHours >= 0 ?
-                    $"(UTC+{utcOffset.TotalHours:0}:00)" :
-                    $"(UTC{utcOffset.TotalHours:0}:00)";
+                // Use custom formatting to support half-hour and quarter-hour offsets
+                var offsetSign = utcOffset.TotalMinutes >= 0 ? "+" : "-";
+                var absHours = Math.Abs(utcOffset.Hours);
+                var absMinutes = Math.Abs(utcOffset.Minutes);
+                var offsetString = $"(UTC{offsetSign}{absHours}:{absMinutes:00})";
 
                 // Fix CA1310 and CA1866 by using IndexOf(char, StringComparison)
                 var startIndex = tz.Value.IndexOf('(', StringComparison.Ordinal);
