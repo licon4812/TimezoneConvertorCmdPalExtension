@@ -343,10 +343,13 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         else
         {
             // Final else block for general filtering
-            allTimeZones = allTimeZones.Where(item => item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                                      item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                                      item.Subtitle.Contains(TimeZoneInfo.Local.DisplayName))
-                .ToList();
+            allTimeZones = allTimeZones.Where(item =>
+                item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                item.Subtitle.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                item.Subtitle.Contains(TimeZoneInfo.Local.DisplayName) ||
+                // Fallback: match abbreviation, but only if it's a full word match
+                item.Title.Split(' ').Any(word => word.Equals(searchText, StringComparison.OrdinalIgnoreCase))
+            ).ToList();
         }
 
         // Ensure the local timezone is not removed
@@ -453,21 +456,33 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
     private static string GetCountriesFromTimeZoneAsAString(KeyValuePair<string, string> tz, DateTime currentTime)
     {
         var tzdb = TzdbDateTimeZoneSource.Default;
-        var zoneId = TimeZoneConverter.TZConvert.WindowsToIana(tz.Key);
+        string zoneId;
+        try
+        {
+            zoneId = TimeZoneConverter.TZConvert.WindowsToIana(tz.Key);
+        }
+        catch
+        {
+            // If conversion fails, return empty
+            return string.Empty;
+        }
         var displayName = tz.Value;
         var zone = DateTimeZoneProviders.Tzdb[zoneId];
         var interval = zone.GetZoneInterval(Instant.FromDateTimeUtc(currentTime.ToUniversalTime()));
         var abbrs = TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(zoneId, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
 
-        // Standard time: match only by abbreviation
+        // Match both standard and daylight abbreviations
         var countries = tzdb.ZoneLocations
             .Where(loc =>
             {
                 var z = DateTimeZoneProviders.Tzdb[loc.ZoneId];
                 var i = z.GetZoneInterval(Instant.FromDateTimeUtc(currentTime.ToUniversalTime()));
-                return i.Name.Equals(abbrs.Standard, StringComparison.OrdinalIgnoreCase);
+                return
+                    (!string.IsNullOrEmpty(abbrs.Standard) && i.Name.Equals(abbrs.Standard, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(abbrs.Daylight) && i.Name.Equals(abbrs.Daylight, StringComparison.OrdinalIgnoreCase));
             })
             .Select(loc => loc.CountryName).Distinct().ToList();
+
         var countriesString = countries.Count == 0 ? string.Empty : string.Join(", ", countries);
         return string.IsNullOrEmpty(countriesString) ? string.Empty : $", {countriesString}";
     }
