@@ -418,10 +418,23 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
             // Always include the local time zone, even if abbreviation is empty
             if (tz.Key != localTimeZoneId && string.IsNullOrEmpty(timeAbbreviation))
                 continue;
+
+            // Convert Windows ID to IANA for NodaTime usage
+            string ianaZoneId;
+            try
+            {
+                ianaZoneId = TimeZoneConverter.TZConvert.WindowsToIana(tz.Key);
+            }
+            catch
+            {
+                // Skip if conversion fails
+                continue;
+            }
+
             var item = new ListItem(new NoOpCommand())
             {
                 Title = $"{currentTime:hh:mm tt} {timeAbbreviation}",
-                Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} {GetCountriesFromTimeZoneAsAString(tz, currentTime)} - {currentTime:D}",
+                Subtitle = $"{tz.Value.Replace($"{subString}", offsetString)} {GetCountriesFromTimeZoneAsAString(new KeyValuePair<string, string>(tz.Key, tz.Value), currentTime)} - {currentTime:D}",
                 Command = new CopyTextCommand($"{currentTime:hh:mm tt}"),
             };
             itemsWithId.Add((item, tz.Key));
