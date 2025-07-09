@@ -474,7 +474,7 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
                 var interval = zone.GetZoneInterval(now);
                 var abbr = interval.Name;
                 var abbrMatch = string.IsNullOrEmpty(abbreviation) || abbr.Equals(abbreviation, StringComparison.OrdinalIgnoreCase);
-                return (interval.StandardOffset == targetOffset || interval.Savings == targetOffset) && abbrMatch;
+                return abbrMatch;
             })
             .Select(loc => loc.CountryName).Distinct().ToList();
         var countriesString = countries.Count == 0 ? string.Empty : string.Join(", ", countries);
