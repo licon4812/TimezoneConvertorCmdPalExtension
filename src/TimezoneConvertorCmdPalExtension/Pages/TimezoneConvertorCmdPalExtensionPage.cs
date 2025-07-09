@@ -470,16 +470,24 @@ internal sealed partial class TimezoneConvertorCmdPalExtensionPage : DynamicList
         var zone = DateTimeZoneProviders.Tzdb[zoneId];
         var interval = zone.GetZoneInterval(Instant.FromDateTimeUtc(currentTime.ToUniversalTime()));
         var abbrs = TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(zoneId, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+        var targetOffset = interval.WallOffset.ToTimeSpan();
 
-        // Match both standard and daylight abbreviations
+        // Match both abbreviation and offset
         var countries = tzdb.ZoneLocations
             .Where(loc =>
             {
                 var z = DateTimeZoneProviders.Tzdb[loc.ZoneId];
                 var i = z.GetZoneInterval(Instant.FromDateTimeUtc(currentTime.ToUniversalTime()));
-                return
+                var abbrsLoc = TimeZoneNames.TZNames.GetAbbreviationsForTimeZone(loc.ZoneId, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+                var offsetLoc = i.WallOffset.ToTimeSpan();
+
+                bool abbrMatch =
                     (!string.IsNullOrEmpty(abbrs.Standard) && i.Name.Equals(abbrs.Standard, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(abbrs.Daylight) && i.Name.Equals(abbrs.Daylight, StringComparison.OrdinalIgnoreCase));
+
+                bool offsetMatch = offsetLoc == targetOffset;
+
+                return abbrMatch && offsetMatch;
             })
             .Select(loc => loc.CountryName).Distinct().ToList();
 
